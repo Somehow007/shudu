@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   SETTINGS: 'shudu_settings',
   STATISTICS: 'shudu_statistics',
   BEST_TIMES: 'shudu_best_times',
+  SHORTCUTS: 'shudu_shortcuts',
 } as const;
 
 export const DIFFICULTY_LABELS: Record<string, string> = {

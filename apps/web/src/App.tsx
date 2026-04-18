@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useGameStore } from '@shudu/ui';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useGameStore, useKeyboardShortcuts, ToastContainer, showToast, ShortcutHelpPanel, ShortcutCustomizer } from '@shudu/ui';
 import { Grid } from '@shudu/ui';
 import { Numpad } from '@shudu/ui';
 import { Timer } from '@shudu/ui';
@@ -140,7 +140,7 @@ function StartPage({ onStartGame }: { onStartGame: (difficulty: Difficulty) => v
   );
 }
 
-function GamePage({ onBackToStart }: { onBackToStart: () => void }) {
+function GamePage({ onBackToStart, onShowShortcuts }: { onBackToStart: () => void; onShowShortcuts: () => void }) {
   const grid = useGameStore((s) => s.grid);
   const isCompleted = useGameStore((s) => s.isCompleted);
   const elapsedTime = useGameStore((s) => s.elapsedTime);
@@ -178,6 +178,9 @@ function GamePage({ onBackToStart }: { onBackToStart: () => void }) {
           ← 主界面
         </button>
         <Timer />
+        <button className="game-shortcut-btn" onClick={onShowShortcuts} title="快捷键 (?)">
+          ⌨️
+        </button>
       </div>
       <div className={`game-board ${isPaused ? 'game-board--paused' : ''}`}>
         {isPaused ? (
@@ -215,6 +218,7 @@ function GamePage({ onBackToStart }: { onBackToStart: () => void }) {
 function SettingsPage({ onBack }: { onBack: () => void }) {
   const settings = useGameStore((s) => s.settings);
   const updateSettings = useGameStore((s) => s.updateSettings);
+  const [activeTab, setActiveTab] = useState<'general' | 'shortcuts'>('general');
 
   return (
     <div className="settings-page">
@@ -222,61 +226,79 @@ function SettingsPage({ onBack }: { onBack: () => void }) {
         <button className="back-btn" onClick={onBack}>← 返回</button>
         <h2>设置</h2>
       </div>
-      <div className="settings-list">
-        <div className="settings-item">
-          <span className="settings-item__label">主题</span>
-          <div className="settings-item__control">
+      <div className="settings-tabs">
+        <button
+          className={`settings-tab ${activeTab === 'general' ? 'settings-tab--active' : ''}`}
+          onClick={() => setActiveTab('general')}
+        >
+          通用
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'shortcuts' ? 'settings-tab--active' : ''}`}
+          onClick={() => setActiveTab('shortcuts')}
+        >
+          ⌨️ 快捷键
+        </button>
+      </div>
+      {activeTab === 'general' ? (
+        <div className="settings-list">
+          <div className="settings-item">
+            <span className="settings-item__label">主题</span>
+            <div className="settings-item__control">
+              <button
+                className={`toggle-btn ${settings.theme === 'light' ? 'toggle-btn--active' : ''}`}
+                onClick={() => updateSettings({ theme: 'light' })}
+              >
+                ☀️ 亮色
+              </button>
+              <button
+                className={`toggle-btn ${settings.theme === 'dark' ? 'toggle-btn--active' : ''}`}
+                onClick={() => updateSettings({ theme: 'dark' })}
+              >
+                🌙 暗色
+              </button>
+            </div>
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">高亮错误</span>
             <button
-              className={`toggle-btn ${settings.theme === 'light' ? 'toggle-btn--active' : ''}`}
-              onClick={() => updateSettings({ theme: 'light' })}
+              className={`switch ${settings.highlightErrors ? 'switch--on' : ''}`}
+              onClick={() => updateSettings({ highlightErrors: !settings.highlightErrors })}
             >
-              ☀️ 亮色
+              <span className="switch__thumb" />
             </button>
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">高亮相同数字</span>
             <button
-              className={`toggle-btn ${settings.theme === 'dark' ? 'toggle-btn--active' : ''}`}
-              onClick={() => updateSettings({ theme: 'dark' })}
+              className={`switch ${settings.highlightSameNumbers ? 'switch--on' : ''}`}
+              onClick={() => updateSettings({ highlightSameNumbers: !settings.highlightSameNumbers })}
             >
-              🌙 暗色
+              <span className="switch__thumb" />
+            </button>
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">自动清除笔记</span>
+            <button
+              className={`switch ${settings.autoRemoveNotes ? 'switch--on' : ''}`}
+              onClick={() => updateSettings({ autoRemoveNotes: !settings.autoRemoveNotes })}
+            >
+              <span className="switch__thumb" />
+            </button>
+          </div>
+          <div className="settings-item">
+            <span className="settings-item__label">显示计时器</span>
+            <button
+              className={`switch ${settings.showTimer ? 'switch--on' : ''}`}
+              onClick={() => updateSettings({ showTimer: !settings.showTimer })}
+            >
+              <span className="switch__thumb" />
             </button>
           </div>
         </div>
-        <div className="settings-item">
-          <span className="settings-item__label">高亮错误</span>
-          <button
-            className={`switch ${settings.highlightErrors ? 'switch--on' : ''}`}
-            onClick={() => updateSettings({ highlightErrors: !settings.highlightErrors })}
-          >
-            <span className="switch__thumb" />
-          </button>
-        </div>
-        <div className="settings-item">
-          <span className="settings-item__label">高亮相同数字</span>
-          <button
-            className={`switch ${settings.highlightSameNumbers ? 'switch--on' : ''}`}
-            onClick={() => updateSettings({ highlightSameNumbers: !settings.highlightSameNumbers })}
-          >
-            <span className="switch__thumb" />
-          </button>
-        </div>
-        <div className="settings-item">
-          <span className="settings-item__label">自动清除笔记</span>
-          <button
-            className={`switch ${settings.autoRemoveNotes ? 'switch--on' : ''}`}
-            onClick={() => updateSettings({ autoRemoveNotes: !settings.autoRemoveNotes })}
-          >
-            <span className="switch__thumb" />
-          </button>
-        </div>
-        <div className="settings-item">
-          <span className="settings-item__label">显示计时器</span>
-          <button
-            className={`switch ${settings.showTimer ? 'switch--on' : ''}`}
-            onClick={() => updateSettings({ showTimer: !settings.showTimer })}
-          >
-            <span className="switch__thumb" />
-          </button>
-        </div>
-      </div>
+      ) : (
+        <ShortcutCustomizer />
+      )}
     </div>
   );
 }
@@ -351,9 +373,17 @@ function StatsPage({ onBack }: { onBack: () => void }) {
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('start');
   const [pageTransition, setPageTransition] = useState<'entering' | 'idle'>('idle');
+  const [showShortcutPanel, setShowShortcutPanel] = useState(false);
   const settings = useGameStore((s) => s.settings);
   const newGame = useGameStore((s) => s.newGame);
   const resetGame = useGameStore((s) => s.resetGame);
+
+  const toastRef = useRef((message: string) => showToast(message));
+
+  useKeyboardShortcuts({
+    onShowShortcuts: () => setShowShortcutPanel((prev) => !prev),
+    onToast: toastRef.current,
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
@@ -403,10 +433,12 @@ export function App() {
       )}
       <main className={`app-main ${pageTransition === 'entering' ? 'app-main--entering' : ''}`}>
         {currentPage === 'start' && <StartPage onStartGame={handleStartGame} />}
-        {currentPage === 'game' && <GamePage onBackToStart={handleBackToStart} />}
+        {currentPage === 'game' && <GamePage onBackToStart={handleBackToStart} onShowShortcuts={() => setShowShortcutPanel(true)} />}
         {currentPage === 'settings' && <SettingsPage onBack={() => setCurrentPage('game')} />}
         {currentPage === 'stats' && <StatsPage onBack={() => setCurrentPage('game')} />}
       </main>
+      <ShortcutHelpPanel isOpen={showShortcutPanel} onClose={() => setShowShortcutPanel(false)} />
+      <ToastContainer />
     </div>
   );
 }
