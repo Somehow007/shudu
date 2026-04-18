@@ -1,7 +1,6 @@
-export { APP_NAME, APP_VERSION, STORAGE_KEYS, DIFFICULTY_LABELS, DIFFICULTY_GIVEN_COUNT, THEME_OPTIONS, INPUT_MODES, } from './constants';
-export type { ThemeOption, InputMode } from './constants';
-export { type IStorageAdapter, BrowserStorageAdapter } from './storage';
-export { registerLocale, getTranslation, t, type Translations } from './i18n';
+export { STORAGE_KEYS, DIFFICULTY_LABELS, DIFFICULTY_GIVEN_COUNT, MINE_DIFFICULTY_LABELS, MINE_DIFFICULTY_INFO, THEME_OPTIONS } from './constants';
+export type { ThemeOption } from './constants';
+export { formatTime } from './utils';
 export {
   SHORTCUT_DEFINITIONS,
   SHORTCUT_CATEGORIES,

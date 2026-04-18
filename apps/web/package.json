@@ -2,7 +2,7 @@
   "name": "@shudu/web",
   "version": "0.0.0",
   "private": true,
-  "description": "数独游戏 Web 版",
+  "description": "益智游戏合集 Web 版",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@shudu/core": "workspace:*",
+    "@shudu/minesweeper-core": "workspace:*",
     "@shudu/shared": "workspace:*",
     "@shudu/ui": "workspace:*",
     "react": "^18.3.0",

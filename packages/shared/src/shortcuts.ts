@@ -3,7 +3,9 @@ export type ShortcutAction =
   | 'input6' | 'input7' | 'input8' | 'input9'
   | 'erase' | 'undo' | 'redo' | 'toggleNote' | 'hint'
   | 'pause' | 'moveUp' | 'moveDown' | 'moveLeft' | 'moveRight'
-  | 'showShortcuts';
+  | 'showShortcuts'
+  | 'mineFlag' | 'mineReveal' | 'mineChord' | 'mineToggleFlagMode'
+  | 'mineNewGame' | 'mineHint' | 'minePause';
 
 export type Platform = 'mac' | 'windows' | 'linux' | 'mobile';
 
@@ -23,13 +25,14 @@ export interface ShortcutDefinition {
   allowCustomize: boolean;
 }
 
-export type ShortcutCategory = 'input' | 'navigation' | 'game' | 'other';
+export type ShortcutCategory = 'input' | 'navigation' | 'game' | 'other' | 'minesweeper';
 
 export const SHORTCUT_CATEGORIES: Record<ShortcutCategory, string> = {
   input: '输入',
   navigation: '导航',
   game: '游戏操作',
   other: '其他',
+  minesweeper: '扫雷操作',
 };
 
 export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
@@ -273,6 +276,90 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     },
     allowCustomize: false,
   },
+  {
+    id: 'mineFlag',
+    label: '标记/取消旗帜',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'f' },
+      windows: { key: 'f' },
+      linux: { key: 'f' },
+      mobile: { key: 'f' },
+    },
+    allowCustomize: true,
+  },
+  {
+    id: 'mineReveal',
+    label: '揭开格子',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: ' ' },
+      windows: { key: ' ' },
+      linux: { key: ' ' },
+      mobile: { key: ' ' },
+    },
+    allowCustomize: true,
+  },
+  {
+    id: 'mineChord',
+    label: '双击揭开 (Chord)',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'Enter' },
+      windows: { key: 'Enter' },
+      linux: { key: 'Enter' },
+      mobile: { key: 'Enter' },
+    },
+    allowCustomize: true,
+  },
+  {
+    id: 'mineToggleFlagMode',
+    label: '切换标旗模式',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'n' },
+      windows: { key: 'n' },
+      linux: { key: 'n' },
+      mobile: { key: 'n' },
+    },
+    allowCustomize: true,
+  },
+  {
+    id: 'mineNewGame',
+    label: '新游戏 (F2)',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'F2' },
+      windows: { key: 'F2' },
+      linux: { key: 'F2' },
+      mobile: { key: 'F2' },
+    },
+    allowCustomize: false,
+  },
+  {
+    id: 'mineHint',
+    label: '扫雷提示',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'h' },
+      windows: { key: 'h' },
+      linux: { key: 'h' },
+      mobile: { key: 'h' },
+    },
+    allowCustomize: true,
+  },
+  {
+    id: 'minePause',
+    label: '扫雷暂停/继续',
+    category: 'minesweeper',
+    bindings: {
+      mac: { key: 'p' },
+      windows: { key: 'p' },
+      linux: { key: 'p' },
+      mobile: { key: 'p' },
+    },
+    allowCustomize: false,
+  },
 ];
 
 export const BROWSER_SHORTCUTS: KeyBinding[] = [
@@ -320,10 +407,10 @@ export function keyBindingToString(binding: KeyBinding, platform: Platform): str
 export function getKeyDisplay(key: string, platform: Platform): string {
   const isMac = platform === 'mac';
   const keyMap: Record<string, string> = {
-    ArrowUp: isMac ? '↑' : '↑',
-    ArrowDown: isMac ? '↓' : '↓',
-    ArrowLeft: isMac ? '←' : '←',
-    ArrowRight: isMac ? '→' : '→',
+    ArrowUp: '↑',
+    ArrowDown: '↓',
+    ArrowLeft: '←',
+    ArrowRight: '→',
     Backspace: isMac ? '⌫' : 'Backspace',
     Delete: isMac ? '⌦' : 'Delete',
     Escape: isMac ? '⎋' : 'Esc',

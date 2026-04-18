@@ -9,7 +9,7 @@ import {
   type GameMove,
   GRID_SIZE,
 } from '@shudu/core';
-import { generate, validate, validateCell } from '@shudu/core';
+import { generate, validate } from '@shudu/core';
 import {
   pushMove,
   undo as undoHistory,
@@ -19,7 +19,7 @@ import {
   createEmptyNote,
   toggleCandidate,
 } from '@shudu/core';
-import { STORAGE_KEYS, type ThemeOption, type InputMode } from '@shudu/shared';
+import { STORAGE_KEYS, type ThemeOption } from '@shudu/shared';
 
 export interface GameStatistics {
   gamesPlayed: number;
@@ -28,11 +28,11 @@ export interface GameStatistics {
   bestStreak: number;
   bestTimes: Record<Difficulty, number | null>;
   difficultyDistribution: Record<Difficulty, number>;
+  difficultyWins: Record<Difficulty, number>;
 }
 
 export interface GameSettings {
   theme: ThemeOption;
-  inputMode: InputMode;
   highlightErrors: boolean;
   highlightSameNumbers: boolean;
   autoRemoveNotes: boolean;
@@ -74,14 +74,12 @@ interface GameStore {
   resetGame: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-  getConflictsForCell: (position: CellPosition) => { row: number[]; col: number[]; box: number[] };
   isCellValueCorrect: (position: CellPosition) => boolean;
   getNumberCount: (value: CellValue) => number;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
-  inputMode: 'normal',
   highlightErrors: true,
   highlightSameNumbers: true,
   autoRemoveNotes: true,
@@ -95,6 +93,7 @@ const DEFAULT_STATISTICS: GameStatistics = {
   bestStreak: 0,
   bestTimes: { easy: null, medium: null, hard: null, expert: null },
   difficultyDistribution: { easy: 0, medium: 0, hard: 0, expert: 0 },
+  difficultyWins: { easy: 0, medium: 0, hard: 0, expert: 0 },
 };
 
 function loadSettings(): GameSettings {
@@ -108,7 +107,14 @@ function loadSettings(): GameSettings {
 function loadStatistics(): GameStatistics {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.STATISTICS);
-    if (stored) return { ...DEFAULT_STATISTICS, ...JSON.parse(stored) };
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...DEFAULT_STATISTICS,
+        ...parsed,
+        difficultyWins: { ...DEFAULT_STATISTICS.difficultyWins, ...(parsed.difficultyWins || {}) },
+      };
+    }
   } catch {}
   return DEFAULT_STATISTICS;
 }
@@ -239,6 +245,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         stats.bestStreak = stats.currentStreak;
       }
       stats.difficultyDistribution[get().difficulty]++;
+      stats.difficultyWins[get().difficulty]++;
       const currentBest = stats.bestTimes[get().difficulty];
       if (currentBest === null || get().elapsedTime < currentBest) {
         stats.bestTimes[get().difficulty] = get().elapsedTime;
@@ -451,12 +458,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   canRedo: () => {
     return canRedoHistory(get().history);
-  },
-
-  getConflictsForCell: (position) => {
-    const { grid } = get();
-    if (!grid) return { row: [], col: [], box: [] };
-    return validateCell(grid, position);
   },
 
   isCellValueCorrect: (position) => {

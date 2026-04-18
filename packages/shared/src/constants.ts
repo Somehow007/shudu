@@ -1,12 +1,9 @@
-export const APP_NAME = '数独';
-export const APP_VERSION = '0.0.0';
-
 export const STORAGE_KEYS = {
-  GAME_STATE: 'shudu_game_state',
   SETTINGS: 'shudu_settings',
   STATISTICS: 'shudu_statistics',
-  BEST_TIMES: 'shudu_best_times',
   SHORTCUTS: 'shudu_shortcuts',
+  MINESWEEPER_SETTINGS: 'shudu_minesweeper_settings',
+  MINESWEEPER_STATISTICS: 'shudu_minesweeper_statistics',
 } as const;
 
 export const DIFFICULTY_LABELS: Record<string, string> = {
@@ -23,8 +20,19 @@ export const DIFFICULTY_GIVEN_COUNT: Record<string, [number, number]> = {
   expert: [20, 24],
 };
 
+export const MINE_DIFFICULTY_LABELS: Record<string, string> = {
+  beginner: '初级',
+  intermediate: '中级',
+  advanced: '高级',
+  expert: '专家',
+};
+
+export const MINE_DIFFICULTY_INFO: Record<string, { grid: string; mines: number; time: string }> = {
+  beginner:     { grid: '9×9',   mines: 10,  time: '2-5分钟' },
+  intermediate: { grid: '16×16', mines: 40,  time: '5-15分钟' },
+  advanced:     { grid: '30×16', mines: 99,  time: '15-30分钟' },
+  expert:       { grid: '30×20', mines: 130, time: '30-60分钟' },
+};
+
 export const THEME_OPTIONS = ['light', 'dark'] as const;
 export type ThemeOption = (typeof THEME_OPTIONS)[number];
-
-export const INPUT_MODES = ['normal', 'note'] as const;
-export type InputMode = (typeof INPUT_MODES)[number];

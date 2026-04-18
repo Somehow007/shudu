@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@shudu/core": "workspace:*",
+    "@shudu/minesweeper-core": "workspace:*",
     "@shudu/shared": "workspace:*",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

@@ -41,6 +41,9 @@ importers:
       '@shudu/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@shudu/minesweeper-core':
+        specifier: workspace:*
+        version: link:../../packages/minesweeper-core
       '@shudu/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -94,6 +97,15 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(jsdom@24.1.3)(terser@5.46.1)
 
+  packages/minesweeper-core:
+    devDependencies:
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(jsdom@24.1.3)(terser@5.46.1)
+
   packages/shared:
     devDependencies:
       typescript:
@@ -108,6 +120,9 @@ importers:
       '@shudu/core':
         specifier: workspace:*
         version: link:../core
+      '@shudu/minesweeper-core':
+        specifier: workspace:*
+        version: link:../minesweeper-core
       '@shudu/shared':
         specifier: workspace:*
         version: link:../shared

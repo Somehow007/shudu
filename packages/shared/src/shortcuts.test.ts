@@ -324,8 +324,8 @@ describe('shortcuts', () => {
   });
 
   describe('SHORTCUT_DEFINITIONS', () => {
-    it('should have definitions for all 20 actions', () => {
-      expect(SHORTCUT_DEFINITIONS).toHaveLength(20);
+    it('should have definitions for all 27 actions', () => {
+      expect(SHORTCUT_DEFINITIONS).toHaveLength(27);
     });
 
     it('should have all categories covered', () => {
