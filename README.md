@@ -433,42 +433,7 @@ shudu/
 
 ---
 
-## 7. 部署指南
-
-### 7.1 自动化部署脚本
-
-项目提供了 `deploy.sh` 脚本，用于在云服务器上自动更新项目版本。
-
-**功能：**
-- 拉取最新代码
-- 安装依赖
-- 构建项目
-- 复制构建结果到 `/var/www/simple-game/` 目录
-- 重启 nginx 服务
-
-**使用方法：**
-1. 复制 `deploy.sh` 文件到你的服务器
-2. 修改脚本中的配置变量（项目目录、分支）
-3. 设置执行权限：`chmod +x deploy.sh`
-4. 运行脚本：`./deploy.sh`
-
-### 7.2 自动化部署方案
-
-#### 定时更新（Cron）
-编辑 crontab 文件：`crontab -e`
-添加以下内容（每小时执行一次）：
-```bash
-0 * * * * /path/to/deploy.sh >> /path/to/deploy.log 2>&1
-```
-
-#### 代码推送自动更新（GitHub Webhook）
-1. 在 GitHub 仓库中设置 Webhook
-2. 创建 webhook 服务器接收推送事件
-3. 触发部署脚本执行
-
-详细配置步骤请参考 `DEPLOYMENT.md` 文件。
-
-## 8. 待开发功能
+## 7. 待开发功能
 
 ### P1 优先级
 
@@ -484,3 +449,84 @@ shudu/
 - [ ] 桌面端（Tauri 2.0）
 - [ ] iOS 端（Capacitor）
 - [ ] Android 端（Capacitor）
+
+---
+
+## 8. 部署指南
+
+### 8.1 部署脚本
+
+项目提供了自动化部署脚本 `deploy.sh`，用于在云服务器上更新项目版本。
+
+#### 功能
+- 拉取最新代码
+- 安装依赖
+- 构建项目
+- 复制构建结果到部署目录
+- 重启 nginx 服务
+
+#### 使用方法
+
+1. 复制 `deploy.sh` 文件到你的服务器
+2. 修改脚本中的配置变量：
+   - `PROJECT_DIR`：项目目录
+   - `BRANCH`：要部署的分支
+
+3. 设置执行权限：
+   ```bash
+   chmod +x deploy.sh
+   ```
+
+4. 运行脚本：
+   ```bash
+   ./deploy.sh
+   ```
+
+### 8.2 自动化部署方案
+
+#### 定时更新
+使用 Cron 定时执行脚本：
+
+```bash
+crontab -e
+```
+
+添加以下内容（每小时执行一次）：
+
+```bash
+0 * * * * /path/to/deploy.sh >> /path/to/deploy.log 2>&1
+```
+
+#### GitHub Webhook
+设置 GitHub Webhook 在代码推送时自动更新项目，详见 `DEPLOYMENT.md` 文件。
+
+### 8.3 Nginx 配置
+
+创建 Nginx 配置文件：
+
+```bash
+sudo nano /etc/nginx/sites-available/simple-game
+```
+
+添加以下内容：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        root /var/www/simple-game;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+启用配置并重启 Nginx：
+
+```bash
+sudo ln -s /etc/nginx/sites-available/simple-game /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
