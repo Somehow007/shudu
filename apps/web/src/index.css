@@ -2683,11 +2683,20 @@ body {
   flex-shrink: 0;
 }
 
-.achievement-notification {
+.achievement-notification-container {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.achievement-notification {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2696,14 +2705,20 @@ body {
   border: 2px solid var(--color-success);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  z-index: 200;
   cursor: pointer;
   animation: achievementSlideIn 0.4s ease;
+  pointer-events: auto;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.achievement-notification--fading {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 @keyframes achievementSlideIn {
-  0% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
-  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  0% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .achievement-notification__icon {
@@ -2844,4 +2859,15 @@ body {
 .start-page__difficulty-card--selected {
   border-color: var(--color-primary) !important;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%) !important;
+}
+
+.mini-sudoku-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.numpad-btn--erase {
+  color: var(--color-danger);
 }

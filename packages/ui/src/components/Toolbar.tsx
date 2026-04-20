@@ -43,7 +43,7 @@ function useVariantToolbarStore(): ToolbarStoreAdapter {
   const isDiagonal = variant === 'diagonal';
   const variantLabel = variant === 'diagonal' ? '对角线数独' : variant === 'mini4' ? '迷你4×4' : '迷你6×6';
   return {
-    hasGrid: useSudokuVariantStore((s) => s.grid) !== null || isDiagonal,
+    hasGrid: useSudokuVariantStore((s) => s.grid) !== null || useSudokuVariantStore((s) => s.miniGrid) !== null,
     difficulty: variantLabel,
     mistakes: useSudokuVariantStore((s) => s.mistakes),
     isPaused: useSudokuVariantStore((s) => s.isPaused),
@@ -54,7 +54,7 @@ function useVariantToolbarStore(): ToolbarStoreAdapter {
     getHint: useSudokuVariantStore((s) => s.getHint),
     canUndo: useSudokuVariantStore((s) => s.canUndo),
     canRedo: useSudokuVariantStore((s) => s.canRedo),
-    canHint: isDiagonal,
+    canHint: true,
     canUndoRedo: isDiagonal,
   };
 }

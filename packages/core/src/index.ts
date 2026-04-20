@@ -6,3 +6,4 @@ export { createHistory, pushMove, undo, redo, canUndo, canRedo } from './history
 export { createEmptyNote, toggleCandidate, addCandidate, removeCandidate, clearNote, hasCandidate, getCandidates, getCandidateCount, isNoteEmpty, setCandidates, removeCandidatesByValues, } from './notes';
 export { generateDiagonal, validateDiagonal, validateDiagonalCell, findDiagonalConflicts } from './diagonal';
 export { generateMini, validateMiniGrid, type MiniGridSize, type MiniPuzzleData, type MiniGridCell } from './miniSudoku';
+export { findNakedSingle, findHiddenSingle, findLogicalHint, type SudokuHint } from './hint';

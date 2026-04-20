@@ -19,6 +19,8 @@ export { AchievementPanel, AchievementUnlockNotification } from './components/Ac
 export { DailyChallengePanel } from './components/DailyChallengePanel';
 export { useGameStore } from './stores/gameStore';
 export type { GameStatistics, GameSettings } from './stores/gameStore';
+export type { SudokuHint } from '@shudu/core';
+export type { MineHintDetail } from '@shudu/minesweeper-core';
 export { useMinesweeperStore } from './stores/minesweeperStore';
 export type { MineGameStatistics, MineGameSettings, MineGameRecord } from './stores/minesweeperStore';
 export { useShortcutStore } from './stores/shortcutStore';
@@ -34,3 +36,5 @@ export { TIMED_CONFIGS } from './stores/mineVariantStore';
 export { useSoundEffects } from './hooks/useSoundEffects';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useMineKeyboardShortcuts } from './hooks/useMineKeyboardShortcuts';
+export { useSudokuVariantKeyboardShortcuts } from './hooks/useSudokuVariantKeyboardShortcuts';
+export { useMineVariantKeyboardShortcuts } from './hooks/useMineVariantKeyboardShortcuts';

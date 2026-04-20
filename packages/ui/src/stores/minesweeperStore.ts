@@ -15,6 +15,8 @@ import {
   checkWin,
   revealAllMines,
   getSafeCellHint,
+  getLogicalMineHint,
+  type MineHintDetail,
 } from '@shudu/minesweeper-core';
 import { STORAGE_KEYS, type ThemeOption } from '@shudu/shared';
 
@@ -85,6 +87,8 @@ interface MinesweeperStore {
   settings: MineGameSettings;
   statistics: MineGameStatistics;
   hitMinePosition: CellPosition | null;
+  lastMineHint: MineHintDetail | null;
+  hintsUsed: number;
 
   newGame: (difficulty?: MineDifficulty) => void;
   handleCellClick: (position: CellPosition) => void;
@@ -378,6 +382,8 @@ export const useMinesweeperStore = create<MinesweeperStore>((set, get) => ({
   settings: loadSettings(),
   statistics: loadStatistics(),
   hitMinePosition: null,
+  lastMineHint: null,
+  hintsUsed: 0,
 
   newGame: (difficulty = 'beginner') => {
     const config = DIFFICULTY_CONFIGS[difficulty];
@@ -397,6 +403,8 @@ export const useMinesweeperStore = create<MinesweeperStore>((set, get) => ({
       selectedCell: null,
       clickCount: 0,
       hitMinePosition: null,
+      lastMineHint: null,
+      hintsUsed: 0,
     });
   },
 
@@ -526,9 +534,21 @@ export const useMinesweeperStore = create<MinesweeperStore>((set, get) => ({
     const { grid, isGameOver, isPaused } = get();
     if (!grid || isGameOver || isPaused) return;
 
+    const logicalHint = getLogicalMineHint(grid);
+    if (logicalHint) {
+      if (logicalHint.type === 'safe') {
+        get().handleCellClick(logicalHint.position);
+      } else {
+        get().handleCellRightClick(logicalHint.position);
+      }
+      set({ lastMineHint: logicalHint, hintsUsed: get().hintsUsed + 1 });
+      return;
+    }
+
     const hint = getSafeCellHint(grid);
     if (hint) {
       get().handleCellClick(hint);
+      set({ lastMineHint: null, hintsUsed: get().hintsUsed + 1 });
     }
   },
 

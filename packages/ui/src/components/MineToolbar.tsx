@@ -40,9 +40,9 @@ function useVariantMineToolbarStore(): MineToolbarAdapter {
     isGameOver: useMineVariantStore((s) => s.isGameOver),
     isPaused: useMineVariantStore((s) => s.isPaused),
     togglePause: useMineVariantStore((s) => s.togglePause),
-    getHint: () => {},
+    getHint: useMineVariantStore((s) => s.getHint),
     newGame: () => newGame(difficulty, variant),
-    canHint: false,
+    canHint: true,
   };
 }
 

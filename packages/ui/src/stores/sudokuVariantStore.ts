@@ -13,6 +13,8 @@ import {
   validateDiagonal,
   generateMini,
   validateMiniGrid,
+  findLogicalHint,
+  type SudokuHint,
   type MiniGridSize,
   type MiniGridCell,
 } from '@shudu/core';
@@ -41,6 +43,8 @@ interface SudokuVariantStore {
   mistakes: number;
   hintsUsed: number;
   isNoteMode: boolean;
+  showTimer: boolean;
+  lastHint: SudokuHint | null;
 
   miniGrid: MiniGridCell[][] | null;
   miniSolution: number[][] | null;
@@ -60,6 +64,7 @@ interface SudokuVariantStore {
   resetGame: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
+  updateSettings: (settings: Partial<Pick<SudokuVariantStore, 'showTimer'>>) => void;
 
   setMiniValue: (row: number, col: number, value: number) => void;
   clearMiniValue: (row: number, col: number) => void;
@@ -78,6 +83,8 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
   mistakes: 0,
   hintsUsed: 0,
   isNoteMode: false,
+  showTimer: true,
+  lastHint: null,
   miniGrid: null,
   miniSolution: null,
   miniGridSize: 4,
@@ -98,6 +105,7 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
         mistakes: 0,
         hintsUsed: 0,
         isNoteMode: false,
+        lastHint: null,
         miniGrid: null,
         miniSolution: null,
         miniGridSize: 4,
@@ -117,6 +125,7 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
         mistakes: 0,
         hintsUsed: 0,
         isNoteMode: false,
+        lastHint: null,
         miniGrid: puzzle.grid,
         miniSolution: puzzle.solution,
         miniGridSize: 4,
@@ -136,6 +145,7 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
         mistakes: 0,
         hintsUsed: 0,
         isNoteMode: false,
+        lastHint: null,
         miniGrid: puzzle.grid,
         miniSolution: puzzle.solution,
         miniGridSize: 6,
@@ -300,58 +310,109 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
   },
 
   getHint: () => {
-    const { grid, solution, selectedCell, history, hintsUsed, variant } = get();
-    if (!grid || !solution || variant !== 'diagonal') return;
+    const { grid, solution, selectedCell, history, hintsUsed, variant, miniGrid, miniSolution, miniGridSize } = get();
+    if (variant === 'diagonal') {
+      if (!grid || !solution) return;
 
-    let targetCell: CellPosition | null = null;
-    if (selectedCell) {
-      const { row, col } = selectedCell;
-      if (!grid[row][col].isGiven && grid[row][col].value !== solution[row][col]) {
-        targetCell = selectedCell;
+      let targetCell: CellPosition | null = null;
+      let correctValue: CellValue | null = null;
+      let hintExplanation: SudokuHint | null = null;
+
+      const logicalHint = findLogicalHint(grid);
+      if (logicalHint) {
+        targetCell = logicalHint.position;
+        correctValue = logicalHint.value;
+        hintExplanation = logicalHint;
       }
-    }
-    if (!targetCell) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-          if (!grid[r][c].isGiven && grid[r][c].value !== solution[r][c]) {
-            targetCell = { row: r, col: c };
-            break;
+
+      if (!targetCell) {
+        if (selectedCell) {
+          const { row, col } = selectedCell;
+          if (!grid[row][col].isGiven && grid[row][col].value !== solution[row][col]) {
+            targetCell = selectedCell;
           }
         }
-        if (targetCell) break;
+        if (!targetCell) {
+          for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+              if (!grid[r][c].isGiven && grid[r][c].value !== solution[r][c]) {
+                targetCell = { row: r, col: c };
+                break;
+              }
+            }
+            if (targetCell) break;
+          }
+        }
+        if (!targetCell) return;
+        correctValue = solution[targetCell.row][targetCell.col] as CellValue;
       }
+
+      const { row, col } = targetCell;
+      if (correctValue === null) return;
+      const prevValue = grid[row][col].value;
+      const prevNote = grid[row][col].note;
+      const newNote = createEmptyNote();
+
+      const newGrid = grid.map((r) => r.map((c) => ({ ...c, note: { candidates: new Set(c.note.candidates) } })));
+      newGrid[row][col] = { value: correctValue, isGiven: false, note: newNote };
+
+      const move: GameMove = {
+        type: 'setValue',
+        position: targetCell,
+        prevValue,
+        newValue: correctValue,
+        prevNote,
+        newNote,
+      };
+      const newHistory = pushMove(history, move);
+
+      const validationResult = validateDiagonal(newGrid);
+      const isCompleted = validationResult.isComplete && validationResult.isValid;
+
+      set({
+        grid: newGrid,
+        history: newHistory,
+        selectedCell: targetCell,
+        hintsUsed: hintsUsed + 1,
+        isCompleted,
+        lastHint: hintExplanation,
+      });
+    } else if (variant === 'mini4' || variant === 'mini6') {
+      if (!miniGrid || !miniSolution) return;
+
+      let targetRow = -1;
+      let targetCol = -1;
+
+      if (selectedCell) {
+        const { row, col } = selectedCell;
+        if (!miniGrid[row][col].isGiven && miniGrid[row][col].value !== miniSolution[row][col]) {
+          targetRow = row;
+          targetCol = col;
+        }
+      }
+
+      if (targetRow === -1) {
+        for (let r = 0; r < miniGridSize; r++) {
+          for (let c = 0; c < miniGridSize; c++) {
+            if (!miniGrid[r][c].isGiven && miniGrid[r][c].value !== miniSolution[r][c]) {
+              targetRow = r;
+              targetCol = c;
+              break;
+            }
+          }
+          if (targetRow !== -1) break;
+        }
+      }
+
+      if (targetRow === -1) return;
+
+      const correctValue = miniSolution[targetRow][targetCol];
+      get().setMiniValue(targetRow, targetCol, correctValue);
+      set({
+        selectedCell: { row: targetRow, col: targetCol },
+        hintsUsed: hintsUsed + 1,
+      });
     }
-    if (!targetCell) return;
-
-    const { row, col } = targetCell;
-    const correctValue = solution[row][col] as CellValue;
-    const prevValue = grid[row][col].value;
-    const prevNote = grid[row][col].note;
-    const newNote = createEmptyNote();
-
-    const newGrid = grid.map((r) => r.map((c) => ({ ...c, note: { candidates: new Set(c.note.candidates) } })));
-    newGrid[row][col] = { value: correctValue, isGiven: false, note: newNote };
-
-    const move: GameMove = {
-      type: 'setValue',
-      position: targetCell,
-      prevValue,
-      newValue: correctValue,
-      prevNote,
-      newNote,
-    };
-    const newHistory = pushMove(history, move);
-
-    const validationResult = validateDiagonal(newGrid);
-    const isCompleted = validationResult.isComplete && validationResult.isValid;
-
-    set({
-      grid: newGrid,
-      history: newHistory,
-      selectedCell: targetCell,
-      hintsUsed: hintsUsed + 1,
-      isCompleted,
-    });
   },
 
   resetGame: () => {
@@ -373,6 +434,10 @@ export const useSudokuVariantStore = create<SudokuVariantStore>((set, get) => ({
 
   canUndo: () => canUndoHistory(get().history),
   canRedo: () => canRedoHistory(get().history),
+
+  updateSettings: (newSettings) => {
+    set(newSettings);
+  },
 
   setMiniValue: (row, col, value) => {
     const { miniGrid, miniSolution, miniGridSize } = get();

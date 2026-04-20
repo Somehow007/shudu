@@ -9,7 +9,7 @@ import {
   type GameMove,
   GRID_SIZE,
 } from '@shudu/core';
-import { generate, validate } from '@shudu/core';
+import { generate, validate, findLogicalHint, type SudokuHint } from '@shudu/core';
 import {
   pushMove,
   undo as undoHistory,
@@ -83,6 +83,7 @@ interface GameStore {
   settings: GameSettings;
   statistics: GameStatistics;
   isNoteMode: boolean;
+  lastHint: SudokuHint | null;
 
   newGame: (difficulty?: Difficulty) => void;
   selectCell: (position: CellPosition) => void;
@@ -263,6 +264,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   settings: loadSettings(),
   statistics: loadStatistics(),
   isNoteMode: false,
+  lastHint: null,
 
   newGame: (difficulty = 'medium') => {
     const puzzle: PuzzleData = generate(difficulty);
@@ -278,6 +280,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       mistakes: 0,
       hintsUsed: 0,
       isNoteMode: false,
+      lastHint: null,
     });
   },
 
@@ -493,29 +496,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!grid || !solution) return;
 
     let targetCell: CellPosition | null = null;
+    let correctValue: CellValue | null = null;
+    let hintExplanation: SudokuHint | null = null;
 
-    if (selectedCell) {
-      const { row, col } = selectedCell;
-      if (!grid[row][col].isGiven && grid[row][col].value !== solution[row][col]) {
-        targetCell = selectedCell;
-      }
+    const logicalHint = findLogicalHint(grid);
+    if (logicalHint) {
+      targetCell = logicalHint.position;
+      correctValue = logicalHint.value;
+      hintExplanation = logicalHint;
     }
 
     if (!targetCell) {
-      const emptyCells: CellPosition[] = [];
-      for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-          if (!grid[r][c].isGiven && grid[r][c].value !== solution[r][c]) {
-            emptyCells.push({ row: r, col: c });
-          }
+      if (selectedCell) {
+        const { row, col } = selectedCell;
+        if (!grid[row][col].isGiven && grid[row][col].value !== solution[row][col]) {
+          targetCell = selectedCell;
         }
       }
-      if (emptyCells.length === 0) return;
-      targetCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+
+      if (!targetCell) {
+        const emptyCells: CellPosition[] = [];
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            if (!grid[r][c].isGiven && grid[r][c].value !== solution[r][c]) {
+              emptyCells.push({ row: r, col: c });
+            }
+          }
+        }
+        if (emptyCells.length === 0) return;
+        targetCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      }
+
+      correctValue = solution[targetCell.row][targetCell.col] as CellValue;
     }
 
     const { row, col } = targetCell;
-    const correctValue = solution[row][col] as CellValue;
+    if (correctValue === null) return;
     const prevValue = grid[row][col].value;
     const prevNote = grid[row][col].note;
     const newNote = createEmptyNote();
@@ -546,6 +562,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       selectedCell: targetCell,
       hintsUsed: hintsUsed + 1,
       isCompleted,
+      lastHint: hintExplanation,
     });
   },
 

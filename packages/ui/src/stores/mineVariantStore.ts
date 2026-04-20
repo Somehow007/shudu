@@ -13,6 +13,9 @@ import {
   chordReveal,
   checkWin,
   revealAllMines,
+  getSafeCellHint,
+  getLogicalMineHint,
+  type MineHintDetail,
 } from '@shudu/minesweeper-core';
 import { useMinesweeperStore } from './minesweeperStore';
 
@@ -47,6 +50,9 @@ interface MineVariantStore {
   hitMinePosition: CellPosition | null;
   timeLimit: number;
   timeRemaining: number;
+  showTimer: boolean;
+  lastMineHint: MineHintDetail | null;
+  hintsUsed: number;
 
   newGame: (difficulty: MineDifficulty, variant: MineVariant) => void;
   handleCellClick: (position: CellPosition) => void;
@@ -60,6 +66,8 @@ interface MineVariantStore {
   isBlindMode: () => boolean;
   isTimedMode: () => boolean;
   getDisplayGrid: () => MineGrid | null;
+  getHint: () => void;
+  updateSettings: (settings: Partial<Pick<MineVariantStore, 'showTimer'>>) => void;
 }
 
 function countFlagsOnGrid(grid: MineGrid): number {
@@ -90,6 +98,9 @@ export const useMineVariantStore = create<MineVariantStore>((set, get) => ({
   hitMinePosition: null,
   timeLimit: 0,
   timeRemaining: 0,
+  showTimer: true,
+  lastMineHint: null,
+  hintsUsed: 0,
 
   newGame: (difficulty, variant) => {
     const config = DIFFICULTY_CONFIGS[difficulty];
@@ -113,6 +124,8 @@ export const useMineVariantStore = create<MineVariantStore>((set, get) => ({
       hitMinePosition: null,
       timeLimit,
       timeRemaining: timeLimit,
+      lastMineHint: null,
+      hintsUsed: 0,
     });
   },
 
@@ -296,6 +309,8 @@ export const useMineVariantStore = create<MineVariantStore>((set, get) => ({
       clickCount: 0,
       hitMinePosition: null,
       timeRemaining: 0,
+      lastMineHint: null,
+      hintsUsed: 0,
     });
   },
 
@@ -324,5 +339,31 @@ export const useMineVariantStore = create<MineVariantStore>((set, get) => ({
         return cell;
       }),
     );
+  },
+
+  updateSettings: (newSettings) => {
+    set(newSettings);
+  },
+
+  getHint: () => {
+    const { grid, isGameOver, isPaused } = get();
+    if (!grid || isGameOver || isPaused) return;
+
+    const logicalHint = getLogicalMineHint(grid);
+    if (logicalHint) {
+      if (logicalHint.type === 'safe') {
+        get().handleCellClick(logicalHint.position);
+      } else {
+        get().handleCellRightClick(logicalHint.position);
+      }
+      set({ lastMineHint: logicalHint, hintsUsed: get().hintsUsed + 1 });
+      return;
+    }
+
+    const hint = getSafeCellHint(grid);
+    if (hint) {
+      get().handleCellClick(hint);
+      set({ lastMineHint: null, hintsUsed: get().hintsUsed + 1 });
+    }
   },
 }));

@@ -4,6 +4,8 @@ import {
   useMinesweeperStore,
   useKeyboardShortcuts,
   useMineKeyboardShortcuts,
+  useSudokuVariantKeyboardShortcuts,
+  useMineVariantKeyboardShortcuts,
   useSoundEffects,
   ToastContainer,
   showToast,
@@ -497,6 +499,8 @@ function SudokuStartPage({ onStartGame, onResumeGame, onBack, onStartVariant }: 
 
 function MinesweeperStartPage({ onStartGame, onResumeGame, onBack, onNavigateToVariant }: { onStartGame: (difficulty: MineDifficulty) => void; onResumeGame: () => void; onBack: () => void; onNavigateToVariant: (variant: Exclude<MineVariant, 'standard'>) => void }) {
   const hasSavedGame = useMinesweeperStore((s) => s.hasSavedGame);
+  const showTimer = useMinesweeperStore((s) => s.settings.showTimer);
+  const updateMineSettings = useMinesweeperStore((s) => s.updateSettings);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
@@ -585,6 +589,15 @@ function MinesweeperStartPage({ onStartGame, onResumeGame, onBack, onNavigateToV
             <span className="start-page__option-label">📊 查看统计</span>
             <span style={{ color: 'var(--color-text-secondary)' }}>›</span>
           </button>
+          <div className="start-page__option-row">
+            <span className="start-page__option-label">⏱️ 显示计时器</span>
+            <button
+              className={`switch ${showTimer ? 'switch--on' : ''}`}
+              onClick={() => updateMineSettings({ showTimer: !showTimer })}
+            >
+              <span className="switch__thumb" />
+            </button>
+          </div>
         </div>
       </div>
       <OverlayPanel isOpen={showStats} title="📊 扫雷统计" onClose={() => setShowStats(false)}>
@@ -629,6 +642,15 @@ function SudokuGamePage({ onBack }: { onBack: () => void }) {
       setShowWinDialog(true);
     }
   }, [isCompleted]);
+
+  useEffect(() => {
+    const currentHint = useGameStore.getState().lastHint;
+    if (currentHint) {
+      showToast(`💡 ${currentHint.technique}：R${currentHint.position.row + 1}C${currentHint.position.col + 1} → ${currentHint.value}`, 4000);
+    } else if (hintsUsed > 0) {
+      showToast('💡 已填入提示', 2000);
+    }
+  }, [hintsUsed]);
 
   const handleNewGame = useCallback(() => {
     setShowWinDialog(false);
@@ -705,6 +727,7 @@ function MinesweeperGamePage({ onBack }: { onBack: () => void }) {
   const hasSavedGame = useMinesweeperStore((s) => s.hasSavedGame);
   const statistics = useMinesweeperStore((s) => s.statistics);
   const checkMinesweeperAchievements = useAchievementStore((s) => s.checkMinesweeperAchievements);
+  const hintsUsed = useMinesweeperStore((s) => s.hintsUsed);
 
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [showBackConfirm, setShowBackConfirm] = useState(false);
@@ -722,6 +745,16 @@ function MinesweeperGamePage({ onBack }: { onBack: () => void }) {
     onToast: toastRef.current,
     onBack: () => setShowBackConfirm(true),
   });
+
+  useEffect(() => {
+    const currentHint = useMinesweeperStore.getState().lastMineHint;
+    if (currentHint) {
+      const action = currentHint.type === 'safe' ? '揭开' : '标旗';
+      showToast(`${currentHint.type === 'safe' ? '✅' : '🚩'} ${currentHint.technique}：${action} R${currentHint.position.row + 1}C${currentHint.position.col + 1}`, 4000);
+    } else if (hintsUsed > 0) {
+      showToast('💡 已揭示安全格', 2000);
+    }
+  }, [hintsUsed]);
 
   useEffect(() => {
     if (!grid && hasSavedGame()) {
@@ -894,6 +927,9 @@ function AchievementsPage({ onBack }: { onBack: () => void }) {
 }
 
 function SudokuVariantPage({ onBack, onStartVariant }: { onBack: () => void; onStartVariant: (variant: SudokuVariant, difficulty?: Difficulty) => void }) {
+  const showTimer = useSudokuVariantStore((s) => s.showTimer);
+  const updateSettings = useSudokuVariantStore((s) => s.updateSettings);
+
   return (
     <div className="start-page">
       <div className="start-page__content">
@@ -926,6 +962,18 @@ function SudokuVariantPage({ onBack, onStartVariant }: { onBack: () => void; onS
             ))}
           </div>
         </div>
+
+        <div className="start-page__section">
+          <div className="start-page__option-row">
+            <span className="start-page__option-label">⏱️ 显示计时器</span>
+            <button
+              className={`switch ${showTimer ? 'switch--on' : ''}`}
+              onClick={() => updateSettings({ showTimer: !showTimer })}
+            >
+              <span className="switch__thumb" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -938,28 +986,82 @@ function MiniSudokuGrid({ gridSize }: { gridSize: MiniGridSize }) {
   const setMiniValue = useSudokuVariantStore((s) => s.setMiniValue);
   const clearMiniValue = useSudokuVariantStore((s) => s.clearMiniValue);
   const isCompleted = useSudokuVariantStore((s) => s.isCompleted);
-  const [selectedPos, setSelectedPos] = useState<{ row: number; col: number } | null>(null);
+  const isNoteMode = useSudokuVariantStore((s) => s.isNoteMode);
+  const toggleNoteMode = useSudokuVariantStore((s) => s.toggleNoteMode);
+  const selectedCell = useSudokuVariantStore((s) => s.selectedCell);
+  const [miniNotes, setMiniNotes] = useState<Record<string, Set<number>>>({});
 
   if (!miniGrid) return null;
 
   const boxRows = gridSize === 4 ? 2 : 2;
   const boxCols = gridSize === 4 ? 2 : 3;
   const maxVal = gridSize;
+  const noteCols = boxCols;
+  const noteRows = boxRows;
 
   const handleCellClick = (row: number, col: number) => {
-    if (miniGrid[row][col].isGiven) return;
-    setSelectedPos({ row, col });
     selectCell({ row, col });
   };
 
   const handleNumberInput = (num: number) => {
-    if (!selectedPos) return;
-    setMiniValue(selectedPos.row, selectedPos.col, num);
+    if (!selectedCell) return;
+    const cell = miniGrid[selectedCell.row][selectedCell.col];
+    if (cell.isGiven) return;
+    if (isNoteMode) {
+      const key = `${selectedCell.row}-${selectedCell.col}`;
+      setMiniNotes((prev) => {
+        const newNotes = { ...prev };
+        const current = new Set(newNotes[key] || []);
+        if (current.has(num)) {
+          current.delete(num);
+        } else {
+          current.add(num);
+        }
+        newNotes[key] = current;
+        return newNotes;
+      });
+    } else {
+      setMiniValue(selectedCell.row, selectedCell.col, num);
+    }
   };
 
   const handleClear = () => {
-    if (!selectedPos) return;
-    clearMiniValue(selectedPos.row, selectedPos.col);
+    if (!selectedCell) return;
+    clearMiniValue(selectedCell.row, selectedCell.col);
+    const key = `${selectedCell.row}-${selectedCell.col}`;
+    setMiniNotes((prev) => {
+      const newNotes = { ...prev };
+      delete newNotes[key];
+      return newNotes;
+    });
+  };
+
+  const selectedValue = selectedCell ? miniGrid[selectedCell.row][selectedCell.col].value : 0;
+
+  const getCellClass = (row: number, col: number) => {
+    const cell = miniGrid[row][col];
+    const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+    const isInSameRow = selectedCell?.row === row;
+    const isInSameCol = selectedCell?.col === col;
+    const isInSameBox =
+      selectedCell &&
+      Math.floor(row / boxRows) === Math.floor(selectedCell.row / boxRows) &&
+      Math.floor(col / boxCols) === Math.floor(selectedCell.col / boxCols);
+    const isSameNumber = selectedValue !== 0 && cell.value === selectedValue;
+    const isConflict = cell.value !== 0 && miniSolution && cell.value !== miniSolution[row][col];
+    const isBorderRight = (col + 1) % boxCols === 0 && col < gridSize - 1;
+    const isBorderBottom = (row + 1) % boxRows === 0 && row < gridSize - 1;
+
+    let className = 'grid-cell';
+    if (cell.isGiven) className += ' grid-cell--given';
+    if (isSelected) className += ' grid-cell--selected';
+    else if (isSameNumber) className += ' grid-cell--same-number';
+    else if (isInSameRow || isInSameCol || isInSameBox) className += ' grid-cell--highlight';
+    if (isConflict) className += ' grid-cell--error';
+    if (isBorderRight) className += ' grid-cell--border-right';
+    if (isBorderBottom) className += ' grid-cell--border-bottom';
+
+    return className;
   };
 
   return (
@@ -967,61 +1069,81 @@ function MiniSudokuGrid({ gridSize }: { gridSize: MiniGridSize }) {
       <div className="mini-sudoku-grid" style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+        gridTemplateRows: `repeat(${gridSize}, 1fr)`,
         gap: '1px',
-        backgroundColor: 'var(--color-border)',
-        border: '2px solid var(--color-border)',
-        borderRadius: '8px',
+        backgroundColor: 'var(--grid-border-color)',
+        border: '2px solid var(--grid-border-color)',
+        borderRadius: '4px',
         overflow: 'hidden',
-        maxWidth: gridSize === 4 ? '280px' : '360px',
+        width: '100%',
+        maxWidth: gridSize === 4 ? '320px' : '400px',
+        aspectRatio: '1',
         margin: '0 auto',
       }}>
         {miniGrid.map((row, r) =>
           row.map((cell, c) => {
-            const isBoxBorderRight = (c + 1) % boxCols === 0 && c < gridSize - 1;
-            const isBoxBorderBottom = (r + 1) % boxRows === 0 && r < gridSize - 1;
-            const isSelected = selectedPos?.row === r && selectedPos?.col === c;
-            const isWrong = cell.value !== 0 && miniSolution && cell.value !== miniSolution[r][c];
+            const noteKey = `${r}-${c}`;
+            const cellNotes = miniNotes[noteKey];
 
             return (
               <div
                 key={`${r}-${c}`}
+                className={getCellClass(r, c)}
                 onClick={() => handleCellClick(r, c)}
-                style={{
-                  width: gridSize === 4 ? '64px' : '56px',
-                  height: gridSize === 4 ? '64px' : '56px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: gridSize === 4 ? '24px' : '20px',
-                  fontWeight: cell.isGiven ? 'bold' : 'normal',
-                  color: cell.isGiven ? 'var(--color-text)' : isWrong ? '#ef4444' : '#3b82f6',
-                  backgroundColor: isSelected ? 'var(--color-cell-selected)' : 'var(--color-cell-bg)',
-                  cursor: cell.isGiven ? 'default' : 'pointer',
-                  borderRight: isBoxBorderRight ? '2px solid var(--color-border)' : undefined,
-                  borderBottom: isBoxBorderBottom ? '2px solid var(--color-border)' : undefined,
-                  transition: 'background-color 0.15s',
-                }}
               >
-                {cell.value !== 0 ? cell.value : ''}
+                {cell.value !== 0 ? (
+                  <span className="cell-value">{cell.value}</span>
+                ) : cellNotes && cellNotes.size > 0 ? (
+                  <div className="cell-notes" style={{
+                    gridTemplateColumns: `repeat(${noteCols}, 1fr)`,
+                    gridTemplateRows: `repeat(${noteRows}, 1fr)`,
+                  }}>
+                    {Array.from({ length: maxVal }, (_, i) => i + 1).map((n) => (
+                      <span
+                        key={n}
+                        className={`cell-note ${cellNotes.has(n) ? 'cell-note--active' : ''}`}
+                      >
+                        {cellNotes.has(n) ? n : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             );
           })
         )}
       </div>
       {!isCompleted && (
-        <div className="numpad" style={{ marginTop: '16px' }}>
-          <div className="numpad__row">
-            {Array.from({ length: maxVal }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                className="numpad__btn"
-                onClick={() => handleNumberInput(n)}
-              >
-                {n}
+        <div className="mini-sudoku-controls">
+          <div className="numpad" style={{ marginTop: '16px' }}>
+            <div className="numpad-numbers" style={{ gridTemplateColumns: `repeat(${maxVal + 1}, 1fr)` }}>
+              {Array.from({ length: maxVal }, (_, i) => i + 1).map((n) => {
+                const count = miniGrid.flat().filter((c) => c.value === n).length;
+                const isComplete = count >= gridSize;
+                return (
+                  <button
+                    key={n}
+                    className={`numpad-btn ${isComplete ? 'numpad-btn--complete' : ''}`}
+                    onClick={() => handleNumberInput(n)}
+                    disabled={isComplete}
+                  >
+                    <span className="numpad-btn__number">{n}</span>
+                    <span className="numpad-btn__count">{count}/{gridSize}</span>
+                  </button>
+                );
+              })}
+              <button className="numpad-btn numpad-btn--erase" onClick={handleClear}>
+                <span className="numpad-btn__number">⌫</span>
+                <span className="numpad-btn__count">擦除</span>
               </button>
-            ))}
-            <button className="numpad__btn numpad__btn--erase" onClick={handleClear}>
-              ✕
+            </div>
+          </div>
+          <div className="numpad-actions" style={{ marginTop: '8px' }}>
+            <button
+              className={`numpad-action-btn ${isNoteMode ? 'numpad-action-btn--active' : ''}`}
+              onClick={toggleNoteMode}
+            >
+              ✏️ {isNoteMode ? '笔记开' : '笔记关'}
             </button>
           </div>
         </div>
@@ -1039,6 +1161,7 @@ function SudokuVariantGamePage({ onBack }: { onBack: () => void }) {
   const mistakes = useSudokuVariantStore((s) => s.mistakes);
   const hintsUsed = useSudokuVariantStore((s) => s.hintsUsed);
   const isPaused = useSudokuVariantStore((s) => s.isPaused);
+  const showTimer = useSudokuVariantStore((s) => s.showTimer);
   const setElapsedTime = useSudokuVariantStore((s) => s.setElapsedTime);
   const newGame = useSudokuVariantStore((s) => s.newGame);
   const [showWinDialog, setShowWinDialog] = useState(false);
@@ -1047,6 +1170,11 @@ function SudokuVariantGamePage({ onBack }: { onBack: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useSudokuVariantKeyboardShortcuts({
+    onShowShortcuts: () => showToast('按 H 提示, Z 撤销, 方向键移动'),
+    onToast: (message: string) => showToast(message),
+  });
 
   useEffect(() => {
     if (intervalRef.current) {
@@ -1069,6 +1197,15 @@ function SudokuVariantGamePage({ onBack }: { onBack: () => void }) {
     }
   }, [isCompleted]);
 
+  useEffect(() => {
+    const currentHint = useSudokuVariantStore.getState().lastHint;
+    if (currentHint) {
+      showToast(`💡 ${currentHint.technique}：R${currentHint.position.row + 1}C${currentHint.position.col + 1} → ${currentHint.value}`, 4000);
+    } else if (hintsUsed > 0) {
+      showToast('💡 已填入提示', 2000);
+    }
+  }, [hintsUsed]);
+
   const handleNewGame = useCallback(() => {
     setShowWinDialog(false);
     newGame(variant);
@@ -1083,9 +1220,11 @@ function SudokuVariantGamePage({ onBack }: { onBack: () => void }) {
           ← 主界面
         </button>
         <span className="toolbar__difficulty">{variantLabel}</span>
-        <div className="timer">
-          <span className="timer__display">{formatTime(elapsedTime)}</span>
-        </div>
+        {showTimer && (
+          <div className="timer">
+            <span className="timer__display">{formatTime(elapsedTime)}</span>
+          </div>
+        )}
         <button className="game-header-btn" onClick={() => setShowStats(true)} title="统计">📊</button>
         <button className="game-header-btn" onClick={() => setShowAchievements(true)} title="成就">🏆</button>
         <button className="game-header-btn" onClick={() => setShowSettings(true)} title="设置">⚙️</button>
@@ -1151,6 +1290,8 @@ function SudokuVariantGamePage({ onBack }: { onBack: () => void }) {
 
 function MineVariantPage({ onBack, onStartVariant, initialVariant }: { onBack: () => void; onStartVariant: (variant: MineVariant, difficulty: MineDifficulty) => void; initialVariant?: Exclude<MineVariant, 'standard'> }) {
   const [selectedVariant, setSelectedVariant] = useState<Exclude<MineVariant, 'standard'>>(initialVariant || 'timed');
+  const showTimer = useMineVariantStore((s) => s.showTimer);
+  const updateVariantSettings = useMineVariantStore((s) => s.updateSettings);
 
   return (
     <div className="start-page">
@@ -1210,6 +1351,18 @@ function MineVariantPage({ onBack, onStartVariant, initialVariant }: { onBack: (
             ))}
           </div>
         </div>
+
+        <div className="start-page__section">
+          <div className="start-page__option-row">
+            <span className="start-page__option-label">⏱️ 显示计时器</span>
+            <button
+              className={`switch ${showTimer ? 'switch--on' : ''}`}
+              onClick={() => updateVariantSettings({ showTimer: !showTimer })}
+            >
+              <span className="switch__thumb" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1227,8 +1380,10 @@ function MineVariantGamePage({ onBack }: { onBack: () => void }) {
   const clickCount = useMineVariantStore((s) => s.clickCount);
   const timeRemaining = useMineVariantStore((s) => s.timeRemaining);
   const isTimedMode = useMineVariantStore((s) => s.isTimedMode);
+  const showTimer = useMineVariantStore((s) => s.showTimer);
   const newGame = useMineVariantStore((s) => s.newGame);
   const firstClick = useMineVariantStore((s) => s.firstClick);
+  const hintsUsed = useMineVariantStore((s) => s.hintsUsed);
 
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [showBackConfirm, setShowBackConfirm] = useState(false);
@@ -1237,6 +1392,12 @@ function MineVariantGamePage({ onBack }: { onBack: () => void }) {
   const [showAchievements, setShowAchievements] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useMineVariantKeyboardShortcuts({
+    onShowShortcuts: () => setShowShortcutHelp((prev) => !prev),
+    onToast: (message: string) => showToast(message),
+    onBack: () => setShowBackConfirm(true),
+  });
 
   useEffect(() => {
     if (intervalRef.current) {
@@ -1259,6 +1420,16 @@ function MineVariantGamePage({ onBack }: { onBack: () => void }) {
       setShowEndDialog(true);
     }
   }, [isGameOver]);
+
+  useEffect(() => {
+    const currentHint = useMineVariantStore.getState().lastMineHint;
+    if (currentHint) {
+      const action = currentHint.type === 'safe' ? '揭开' : '标旗';
+      showToast(`${currentHint.type === 'safe' ? '✅' : '🚩'} ${currentHint.technique}：${action} R${currentHint.position.row + 1}C${currentHint.position.col + 1}`, 4000);
+    } else if (hintsUsed > 0) {
+      showToast('💡 已揭示安全格', 2000);
+    }
+  }, [hintsUsed]);
 
   const handleNewGame = useCallback(() => {
     setShowEndDialog(false);
@@ -1286,14 +1457,16 @@ function MineVariantGamePage({ onBack }: { onBack: () => void }) {
         </button>
         <MineCounter variant />
         <FaceButton variant />
-        {isTimedMode() ? (
-          <div className={`timer ${timeRemaining <= 30 ? 'timer--warning' : ''}`}>
-            <span className="timer__display">{formatTime(timeRemaining)}</span>
-          </div>
-        ) : (
-          <div className={`timer ${isPaused ? 'timer--paused' : ''}`}>
-            <span className="timer__display">{formatTime(elapsedTime)}</span>
-          </div>
+        {showTimer && (
+          isTimedMode() ? (
+            <div className={`timer ${timeRemaining <= 30 ? 'timer--warning' : ''}`}>
+              <span className="timer__display">{formatTime(timeRemaining)}</span>
+            </div>
+          ) : (
+            <div className={`timer ${isPaused ? 'timer--paused' : ''}`}>
+              <span className="timer__display">{formatTime(elapsedTime)}</span>
+            </div>
+          )
         )}
         <button className="game-header-btn" onClick={() => setShowStats(true)} title="统计">📊</button>
         <button className="game-header-btn" onClick={() => setShowAchievements(true)} title="成就">🏆</button>

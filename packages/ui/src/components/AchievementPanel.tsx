@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react';
 import { useAchievementStore } from '../stores/achievementStore';
 import type { AchievementCategory } from '../stores/achievementStore';
 
@@ -65,23 +66,70 @@ export function AchievementPanel({ category }: { category?: AchievementCategory 
   );
 }
 
+const ACHIEVEMENT_NOTIFICATION_DURATION = 4000;
+
+interface NotificationItem {
+  id: string;
+  icon: string;
+  name: string;
+  fading: boolean;
+}
+
 export function AchievementUnlockNotification() {
   const recentlyUnlocked = useAchievementStore((s) => s.recentlyUnlocked);
   const achievements = useAchievementStore((s) => s.achievements);
   const clearRecentlyUnlocked = useAchievementStore((s) => s.clearRecentlyUnlocked);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  if (!recentlyUnlocked) return null;
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
 
-  const achievement = achievements.find((a) => a.id === recentlyUnlocked);
-  if (!achievement) return null;
+  useEffect(() => {
+    if (!recentlyUnlocked) return;
+    const achievement = achievements.find((a) => a.id === recentlyUnlocked);
+    if (!achievement) return;
+
+    const notifId = recentlyUnlocked + '-' + Date.now();
+    setNotifications((prev) => [
+      ...prev,
+      { id: notifId, icon: achievement.icon, name: achievement.name, fading: false },
+    ]);
+    clearRecentlyUnlocked();
+
+    const fadeTimer = setTimeout(() => {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, fading: true } : n)),
+      );
+    }, ACHIEVEMENT_NOTIFICATION_DURATION - 500);
+
+    const removeTimer = setTimeout(() => {
+      removeNotification(notifId);
+    }, ACHIEVEMENT_NOTIFICATION_DURATION);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
+  }, [recentlyUnlocked, achievements, clearRecentlyUnlocked, removeNotification]);
+
+  if (notifications.length === 0) return null;
 
   return (
-    <div className="achievement-notification" onClick={clearRecentlyUnlocked}>
-      <span className="achievement-notification__icon">{achievement.icon}</span>
-      <div className="achievement-notification__info">
-        <span className="achievement-notification__title">🎉 成就解锁!</span>
-        <span className="achievement-notification__name">{achievement.name}</span>
-      </div>
+    <div className="achievement-notification-container">
+      {notifications.map((notif) => (
+        <div
+          key={notif.id}
+          className={`achievement-notification ${notif.fading ? 'achievement-notification--fading' : ''}`}
+          onClick={() => removeNotification(notif.id)}
+        >
+          <span className="achievement-notification__icon">{notif.icon}</span>
+          <div className="achievement-notification__info">
+            <span className="achievement-notification__title">🎉 成就解锁!</span>
+            <span className="achievement-notification__name">{notif.name}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

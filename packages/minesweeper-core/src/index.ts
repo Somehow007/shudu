@@ -34,5 +34,7 @@ export {
 export {
   getHint,
   getSafeCellHint,
+  getLogicalMineHint,
   type HintResult,
+  type MineHintDetail,
 } from './solver';
