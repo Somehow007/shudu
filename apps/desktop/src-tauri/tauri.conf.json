@@ -1,0 +1,61 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram-ios/refs/heads/NiceG/main/NiceGramUI/Tauri/tauri.conf.v2.schema.json",
+  "productName": "益智游戏合集",
+  "version": "0.1.0",
+  "identifier": "com.shudu.games",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "益智游戏合集 - 数独与扫雷",
+        "width": 800,
+        "height": 600,
+        "minWidth": 400,
+        "minHeight": 500,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "copyright": "",
+    "category": "Game",
+    "shortDescription": "益智游戏合集 - 数独与扫雷",
+    "longDescription": "一款包含数独和扫雷的跨平台益智游戏合集桌面版，支持多种难度和游戏变体。",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
+  }
+}
