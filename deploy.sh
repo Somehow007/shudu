@@ -4,7 +4,7 @@
 # 用于自动更新云服务器上的项目版本
 
 # 配置变量
-PROJECT_DIR="$HOME/project/shudu"  # 替换为你的项目目录
+PROJECT_DIR="$HOME/project/simple-game"  # 替换为你的项目目录
 GITHUB_REPO="your-github-repo-url"  # 替换为你的 GitHub 仓库 URL
 BRANCH="main"  # 替换为你要部署的分支
 
